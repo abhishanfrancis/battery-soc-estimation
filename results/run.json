@@ -1,0 +1,71 @@
+{
+  "python": "3.11.9",
+  "tensorflow": "2.19.1",
+  "devices": [
+    "/physical_device:CPU:0"
+  ],
+  "seed": 146,
+  "batch_size": 128,
+  "epochs_requested": 18,
+  "threads": 6,
+  "train_stride": 16,
+  "eval_stride": 5,
+  "smoke": false,
+  "splits": {
+    "train": {
+      "windows": 10150,
+      "experiments": [
+        "+00C_Mixed1",
+        "+00C_Mixed2",
+        "+00C_Mixed4",
+        "+00C_Mixed5",
+        "+10C_Mixed1",
+        "+10C_Mixed2",
+        "+10C_Mixed4",
+        "+10C_Mixed5",
+        "+25C_Mixed1",
+        "+25C_Mixed2",
+        "+25C_Mixed3",
+        "+25C_Mixed4",
+        "+25C_Mixed5",
+        "+40C_Mixed1",
+        "+40C_Mixed2",
+        "+40C_Mixed3",
+        "-10C_Mixed1",
+        "-10C_Mixed2",
+        "-10C_Mixed3",
+        "-10C_Mixed5",
+        "-20C_Mixed1",
+        "-20C_Mixed2",
+        "-20C_Mixed3",
+        "-20C_Mixed4",
+        "-20C_Mixed5"
+      ]
+    },
+    "validation": {
+      "windows": 6237,
+      "experiments": [
+        "+00C_Mixed6",
+        "+10C_Mixed6",
+        "+25C_Mixed6",
+        "-10C_Mixed6",
+        "-20C_Mixed6"
+      ]
+    },
+    "test": {
+      "windows": 13044,
+      "experiments": [
+        "+00C_Mixed7",
+        "+00C_Mixed8",
+        "+10C_Mixed7",
+        "+10C_Mixed8",
+        "+25C_Mixed7",
+        "+25C_Mixed8",
+        "-10C_Mixed7",
+        "-10C_Mixed8",
+        "-20C_Mixed7",
+        "-20C_Mixed8"
+      ]
+    }
+  }
+}
