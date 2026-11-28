@@ -1,0 +1,51 @@
+{
+  "python": "3.12.14",
+  "tensorflow": "2.19.1",
+  "devices": [
+    "/physical_device:CPU:0"
+  ],
+  "seed": 146,
+  "batch_size": 128,
+  "epochs_requested": 18,
+  "threads": 2,
+  "train_stride": 16,
+  "eval_stride": 5,
+  "smoke": false,
+  "splits": {
+    "train": {
+      "windows": 4641,
+      "experiments": [
+        "+00C_Cycle1",
+        "+00C_Cycle2",
+        "+10C_Cycle1",
+        "+10C_Cycle2",
+        "+25C_Cycle1",
+        "+25C_Cycle2",
+        "-10C_Cycle1",
+        "-10C_Cycle2",
+        "-20C_Cycle1",
+        "-20C_Cycle2"
+      ]
+    },
+    "validation": {
+      "windows": 6961,
+      "experiments": [
+        "+00C_Cycle3",
+        "+10C_Cycle3",
+        "+25C_Cycle3",
+        "-10C_Cycle3",
+        "-20C_Cycle3"
+      ]
+    },
+    "test": {
+      "windows": 7681,
+      "experiments": [
+        "+00C_Cycle4",
+        "+10C_Cycle4",
+        "+25C_Cycle4",
+        "-10C_Cycle4",
+        "-20C_Cycle4"
+      ]
+    }
+  }
+}

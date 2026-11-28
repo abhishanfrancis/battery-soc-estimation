@@ -1,4 +1,4 @@
-"""Try a saved model on a 1 Hz measurement CSV."""
+"""Try saved LG 18650HG2 or Panasonic NCR18650PF models on a 1 Hz measurement CSV."""
 import io
 
 import joblib
@@ -7,16 +7,33 @@ import streamlit as st
 
 from common import FEATURES, ROOT, TIME, windows
 
-RESULTS = ROOT / "results"
-DEMO = ROOT / "data" / "demo_measurements.csv"
+DATASETS = {
+    "LG 18650HG2": {
+        "paths": lambda model: (
+            ROOT / "lg" / "results" / f"{model}.keras",
+            ROOT / "lg" / "results" / "scaler.joblib",
+            ROOT / "lg" / "data" / "demo_measurements.csv",
+        ),
+        "train_hint": "Run `python lg/train.py` to build the saved LG model and scaler.",
+    },
+    "Panasonic NCR18650PF": {
+        "paths": lambda model: (
+            ROOT / "panasonic" / model / "results" / f"{model}.keras",
+            ROOT / "panasonic" / model / "results" / "scaler.joblib",
+            ROOT / "panasonic" / model / "data" / "demo_measurements.csv",
+        ),
+        "train_hint": "Run `python panasonic/<model>/preprocess.py` and `python panasonic/<model>/train.py` first.",
+    },
+}
 
 
 @st.cache_resource
-def load_artifacts(name, model_modified, scaler_modified):
+def load_artifacts(dataset, name, model_modified, scaler_modified):
     from tensorflow.keras.models import load_model
 
-    model = load_model(RESULTS / f"{name.lower()}.keras", compile=False)
-    return model, joblib.load(RESULTS / "scaler.joblib")
+    model_path, scaler_path, _ = DATASETS[dataset]["paths"](name.lower())
+    model = load_model(model_path, compile=False)
+    return model, joblib.load(scaler_path)
 
 
 def infer(raw, model, scaler):
@@ -45,38 +62,56 @@ def infer(raw, model, scaler):
 
 
 def main():
-    st.set_page_config(page_title="Battery SoC estimator")
-    st.title("Battery State of Charge")
-    st.markdown("Upload chronological **1 Hz** measurements with columns "
-                "`time_s`, `voltage_v`, `current_a`, and `temperature_c`. "
-                "Use negative current for discharge and positive for charge. "
-                "Include `experiment_id` when the file contains multiple experiments.")
-    choice = st.radio("Model", ["LSTM", "GRU"], horizontal=True)
+    st.set_page_config(page_title="Battery SoC Estimator")
+    st.title("Battery State of Charge Estimator")
+    st.markdown(
+        "Upload chronological **1 Hz** measurements with columns "
+        "`time_s`, `voltage_v`, `current_a`, and `temperature_c`. "
+        "Use negative current for discharge and positive for charge. "
+        "Include `experiment_id` when the file contains multiple experiments."
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        dataset = st.radio("Dataset / Cell", list(DATASETS.keys()), horizontal=True)
+    with col2:
+        choice = st.radio("Model", ["LSTM", "GRU"], horizontal=True)
+
+    model_path, scaler_path, demo = DATASETS[dataset]["paths"](choice.lower())
     uploaded = st.file_uploader("Measurement CSV", type="csv")
-    use_demo = st.checkbox("Use a real held-out dataset sample", value=DEMO.is_file())
-    if uploaded is None and not (use_demo and DEMO.is_file()):
+    use_demo = st.checkbox("Use a real held-out dataset sample", value=demo.is_file())
+    if uploaded is None and not (use_demo and demo.is_file()):
         return
     if not st.button("Estimate SoC", type="primary"):
         return
-    model_path = RESULTS / f"{choice.lower()}.keras"
-    scaler_path = RESULTS / "scaler.joblib"
     if not model_path.is_file() or not scaler_path.is_file():
-        st.error("Run python train.py to build the saved model and scaler.")
+        st.error(DATASETS[dataset]["train_hint"])
         return
     try:
         with st.spinner("Estimating SoC"):
-            model, scaler = load_artifacts(choice, model_path.stat().st_mtime, scaler_path.stat().st_mtime)
-            frame, predictions = infer(uploaded.getvalue() if uploaded else DEMO.read_bytes(), model, scaler)
+            model, scaler = load_artifacts(
+                dataset, choice, model_path.stat().st_mtime, scaler_path.stat().st_mtime
+            )
+            frame, predictions = infer(
+                uploaded.getvalue() if uploaded else demo.read_bytes(), model, scaler
+            )
     except (ValueError, OSError) as error:
         st.error(str(error))
         return
 
     st.metric("Latest predicted SoC", f"{predictions['predicted_soc_pct'].iloc[-1]:.1f}%")
-    st.caption(f"{len(predictions):,} predictions from {len(frame):,} input measurements")
+    st.caption(
+        f"{dataset} · {choice} · {len(predictions):,} predictions from {len(frame):,} input measurements"
+    )
     for column, label in zip(FEATURES, ["Voltage (V)", "Current (A)", "Battery case temperature (C)"]):
         st.line_chart(frame, x=TIME, y=column, color="experiment_id", y_label=label)
     st.line_chart(predictions, x=TIME, y="predicted_soc_pct", color="experiment_id", y_label="Predicted SoC (%)")
-    st.download_button("Download predictions", predictions.to_csv(index=False), "soc_predictions.csv", "text/csv")
+    st.download_button(
+        "Download predictions",
+        predictions.to_csv(index=False),
+        f"soc_predictions_{dataset.split()[0].lower()}_{choice.lower()}.csv",
+        "text/csv",
+    )
 
 
 if __name__ == "__main__":

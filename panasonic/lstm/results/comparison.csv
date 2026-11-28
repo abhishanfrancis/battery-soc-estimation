@@ -1,0 +1,2 @@
+model,mae_pp,rmse_pp,max_abs_error_pp,train_seconds,inference_seconds,inference_ms_per_window,parameters,epochs,best_epoch,test_windows
+LSTM,1.5283795173538879,2.028324560351881,10.647943651922823,45.91712771699997,1.3036527360000036,0.16972435047519902,30369,17,13,7681

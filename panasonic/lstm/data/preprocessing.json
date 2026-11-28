@@ -1,0 +1,4 @@
+{
+  "train_stride": 16,
+  "eval_stride": 5
+}

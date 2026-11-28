@@ -4,6 +4,8 @@ __pycache__/
 *.py[cod]
 .env
 .streamlit/secrets.toml
-data/hg2.zip
-data/*.part
-smoke/
+lg/data/hg2.zip
+lg/data/*.part
+lg/smoke/
+panasonic/raw/
+panasonic/*/smoke/

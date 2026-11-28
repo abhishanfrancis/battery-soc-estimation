@@ -1,0 +1,2 @@
+model,mae_pp,rmse_pp,max_abs_error_pp,train_seconds,inference_seconds,inference_ms_per_window,parameters,epochs,best_epoch,test_windows
+GRU,1.6471805090174025,2.188264458315331,10.671619888831827,44.683806581,0.7681303900000103,0.10000395651607998,23201,18,16,7681

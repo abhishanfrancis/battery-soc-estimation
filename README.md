@@ -1,55 +1,73 @@
 # Intelligent Battery State of Charge Estimation
 
-This project compares LSTM and GRU on measured LG 18650HG2 mixed drive cycles. Each model estimates present state of charge from the latest 60 one-second voltage, current and battery case temperature readings.
+This repository organizes reproducible **LSTM** and **GRU** State-of-Charge (SoC) benchmarks across two lithium-ion battery datasets:
+
+* **LG 18650HG2** ([lg/](lg/)) — Phillip Kollmeyer et al. (2020), Mendeley Data V3, DOI `10.17632/cp3473x7xv.3`
+* **Panasonic NCR18650PF** ([panasonic/](panasonic/)) — Phillip Kollmeyer (2018), Mendeley Data V1, DOI `10.17632/wykht8y7tg.1`
+
+Each model estimates present SoC from the latest **60 one-second readings** of `voltage_v`, `current_a`, and `temperature_c`.
+
+## Repository Layout
+
+```text
+battery-soc-estimation/
+├── common.py                 # Shared feature & sliding-window utilities
+├── dashboard.py              # Unified Streamlit app (select LG or Panasonic, LSTM or GRU)
+├── requirements.txt          # Python dependencies
+├── BENCHMARK_COMPARISON.md   # Side-by-side metrics across both datasets
+├── lg/                       # LG 18650HG2 pipeline, processed data, and trained models
+│   ├── prepare.py
+│   ├── train.py
+│   ├── data/
+│   └── results/
+└── panasonic/                # Panasonic NCR18650PF pipeline, processed data, and trained models
+    ├── prepare.py
+    ├── preprocessing.py
+    ├── training.py
+    ├── lstm/                 # data/ and results/ for Panasonic LSTM
+    └── gru/                  # data/ and results/ for Panasonic GRU
+```
+
+## Benchmark Summary
+
+| Dataset | Model | Test MAE (pp) | Test RMSE (pp) | Max Abs Error (pp) | Test Windows | Batched Inference (ms/window) |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| **LG 18650HG2** | LSTM | 1.253 | 1.722 | 9.419 | 13,044 | 0.404 |
+| **LG 18650HG2** | GRU | 1.322 | 1.786 | 9.788 | 13,044 | 0.273 |
+| **Panasonic NCR18650PF** | LSTM | 1.528 | 2.028 | 10.648 | 7,681 | 0.170 |
+| **Panasonic NCR18650PF** | GRU | 1.647 | 2.188 | 10.672 | 7,681 | 0.100 |
+
+See [BENCHMARK_COMPARISON.md](BENCHMARK_COMPARISON.md) for full details.
 
 ## Run on Windows
 
-Open PowerShell in this project directory. The delivered benchmark was trained on the native Windows CPU because TensorFlow 2.19 does not expose CUDA on native Windows. [TensorFlow installation guide](https://www.tensorflow.org/install/pip) Use Python 3.11 and a virtual environment. Using its Python executable directly avoids PowerShell activation policy issues.
+Use a **Python 3.11 or 3.12** virtual environment (TensorFlow 2.19.1 does not support Python 3.13+):
 
 ```powershell
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
-.venv/Scripts/python.exe -m pip check
-.venv/Scripts/python.exe -c "import tensorflow as tf; print(tf.__version__, tf.config.list_physical_devices())"
 ```
 
-### Try the dashboard
+### Launch the Unified Dashboard
 
 ```powershell
 .venv/Scripts/python.exe -m streamlit run dashboard.py
 ```
 
-Open the local URL printed by Streamlit. Choose either model and click **Estimate SoC**. The built-in demo uses real measurements from a held-out experiment. You can also upload a CSV with `time_s,voltage_v,current_a,temperature_c` and optional `experiment_id,segment_id`. Keep rows in recording order, sampled at approximately one second, with discharge current negative and charging current positive. When starting a new experiment or recording segment, change its ID. Download predictions from the dashboard.
+In the dashboard, select either **LG 18650HG2** or **Panasonic NCR18650PF**, choose **LSTM** or **GRU**, and run inference on the built-in held-out demo CSV or upload your own 1 Hz CSV (`time_s,voltage_v,current_a,temperature_c`).
 
-### Rebuild the experiment
+### Re-run Training or Preprocessing (Optional)
 
-The delivered processed data can be used immediately for training. To rebuild it from raw source measurements, run `prepare.py`. The automatic download is several hundred MB. Alternatively click **Download All** on the version 3 dataset page, save the ZIP without extracting it, and use `prepare.py --archive "C:/path/to/archive.zip"`.
+All processed data and trained models are already included. To re-run from scratch:
 
 ```powershell
-.venv/Scripts/python.exe prepare.py
-.venv/Scripts/python.exe train.py --smoke
-.venv/Scripts/python.exe train.py
+# LG 18650HG2
+.venv/Scripts/python.exe lg/prepare.py
+.venv/Scripts/python.exe lg/train.py
+
+# Panasonic NCR18650PF
+.venv/Scripts/python.exe panasonic/lstm/preprocess.py
+.venv/Scripts/python.exe panasonic/lstm/train.py
+.venv/Scripts/python.exe panasonic/gru/preprocess.py
+.venv/Scripts/python.exe panasonic/gru/train.py
 ```
-
-The smoke run uses small slices and writes to `smoke/`. The benchmark uses all eligible experiments and writes both models, scaler, plots, CSVs and run settings to `results/`. To keep the delivered benchmark unchanged during an experiment, pass `--out results-new`. The dashboard loads artifacts from `results/`.
-
-### Google Colab
-
-Only needed if you want a faster or denser training run. Upload and unzip the project or copy it from Drive, change to its directory, and use the following in a notebook. Select a GPU runtime before training if one is available. The processed data included here lets you skip the raw download.
-
-```python
-%cd /content/battery_soc
-%pip install -r requirements.txt "tensorflow[and-cuda]==2.19.1"
-```
-
-Restart the Colab session after installation if requested. Check TensorFlow's device list and run the same scripts.
-
-```python
-!python -c "import tensorflow as tf; print(tf.config.list_physical_devices())"
-!python train.py --smoke
-!python train.py --epochs 30 --train-stride 4 --out colab-results
-```
-
-### Data credit
-
-Philip Kollmeyer, Carlos Vidal, Mina Naguib and Michael Skells (2020), *LG 18650HG2 Li-ion Battery Data and Example Deep Neural Network xEV SOC Estimator Script*, Mendeley Data V3, DOI 10.17632/cp3473x7xv.3, CC BY 4.0. This project uses the raw mixed-cycle MAT files and creates its own 1 Hz samples and nominal-capacity references. See the experiment manifest for source filenames. [Dataset, original documentation and download](https://data.mendeley.com/datasets/cp3473x7xv/3) ? [CC BY 4.0 license](https://creativecommons.org/licenses/by/4.0/)
